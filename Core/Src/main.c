@@ -31,7 +31,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define CONVERSION_COUNT 2
+#define ADC_ROW_TO_VOLTAGE 0.00005035477f
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -46,6 +47,9 @@ ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
 TIM_HandleTypeDef htim8;
+
+volatile uint16_t adc_data[CONVERSION_COUNT];
+volatile float potVoltage[CONVERSION_COUNT];
 
 /* USER CODE BEGIN PV */
 
@@ -64,6 +68,14 @@ static void MX_TIM8_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc) {
+
+	for(uint8_t i = 0; i < CONVERSION_COUNT; ++i) {
+		potVoltage[i] = ADC_ROW_TO_VOLTAGE * adc_data[i];
+	}
+
+}
 
 /* USER CODE END 0 */
 
@@ -104,6 +116,13 @@ int main(void)
   MX_TIM8_Init();
   /* USER CODE BEGIN 2 */
 
+  HAL_ADCEx_Calibration_Start(&hadc1,ADC_CALIB_OFFSET,ADC_SINGLE_ENDED);
+
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&adc_data, CONVERSION_COUNT);
+  // it will fill data at 2.5 million
+
+  HAL_TIM_Base_Start(&htim8);
+
   /* USER CODE END 2 */
 
   /* Initialize leds */
@@ -133,6 +152,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	 HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
