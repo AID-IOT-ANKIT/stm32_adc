@@ -91,7 +91,7 @@ static void MX_TIM8_Init(void);
 //}
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
-	for(uint16_t i = 0; i < (ADC_BUFFER_LENGTH / 2) - 1; ++i) {
+	for(uint16_t i = 0; i < ADC_BUFFER_LENGTH; ++i) {
 
 			fftInBuf[fftIndex++] = adc_data[i];
 
