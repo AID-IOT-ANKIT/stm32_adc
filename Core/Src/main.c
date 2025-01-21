@@ -53,6 +53,8 @@ DMA_HandleTypeDef hdma_adc1;
 
 TIM_HandleTypeDef htim8;
 
+/* USER CODE BEGIN PV */
+
 volatile uint16_t adc_data[ADC_BUFFER_LENGTH];
 
 arm_rfft_fast_instance_f32 fftHandler;
@@ -62,8 +64,6 @@ float fftOutBuf[FFT_BUFFER_SIZE];
 
 uint8_t fftFlag = 0;
 uint16_t fftIndex = 0;
-
-/* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
 
@@ -146,6 +146,12 @@ int main(void)
   MX_TIM8_Init();
   /* USER CODE BEGIN 2 */
 
+  uint32_t printTimer = 0;
+
+  float peakVal = 0.0f;
+  uint16_t peakHz = 0;
+
+
   // Initialize FFT
   arm_rfft_fast_init_f32(&fftHandler, FFT_BUFFER_SIZE);
 
@@ -176,11 +182,6 @@ int main(void)
   {
     Error_Handler();
   }
-
-  uint32_t printTimer = 0;
-
-  float peakVal = 0.0f;
-  uint16_t peakHz = 0;
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -380,9 +381,9 @@ static void MX_TIM8_Init(void)
 
   /* USER CODE END TIM8_Init 1 */
   htim8.Instance = TIM8;
-  htim8.Init.Prescaler = 6 - 1;
+  htim8.Init.Prescaler = 12 - 1;
   htim8.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim8.Init.Period = 16 - 1;
+  htim8.Init.Period = 6 - 1;
   htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim8.Init.RepetitionCounter = 0;
   htim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
