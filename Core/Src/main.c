@@ -36,7 +36,6 @@
 /* USER CODE BEGIN PD */
 #define SAMPLE_RATE_HZ (2.5 * 1e6)
 #define ADC_BUFFER_LENGTH 260
-#define ADC_ROW_TO_VOLTAGE 0.00005035477f
 #define FFT_BUFFER_SIZE 2048
 #define PRINT_TIME 2000
 /* USER CODE END PD */
@@ -210,6 +209,8 @@ int main(void)
 
 			 freqIndex++;
 		 }
+
+		 fftFlag = 0;
 	 }
 
 	 if(HAL_GetTick() - printTimer > PRINT_TIME) {
@@ -219,15 +220,6 @@ int main(void)
 		 printTimer = HAL_GetTick();
 	 }
 
-//	 if(HAL_GetTick() - timerUSB > USB_DEBUG_TIME_S) {
-//
-//		 uint16_t usbBuf[USB_BUFFER_SIZE_MAX];
-//		 uint16_t usbBufLen = snprintf((char *)usbBuf,USB_BUFFER_SIZE_MAX, "%u\r\n", peakHz);
-//
-//		 CDC_Transmit_HS(usbBuf, usbBufLen);
-//
-//		 timerUSB = HAL_GetTick();
-//	 }
   }
   /* USER CODE END 3 */
 }
