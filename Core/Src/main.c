@@ -147,13 +147,14 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   // Initialize FFT
-  arm_rfft_fast_init_f32(&fftHandler, FFT_BUFFER_SIZE);
 
   HAL_ADCEx_Calibration_Start(&hadc1,ADC_CALIB_OFFSET,ADC_SINGLE_ENDED);
 
   HAL_TIM_Base_Start(&htim8);
 
   HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&adc_data, ADC_BUFFER_LENGTH);
+
+  arm_rfft_fast_init_f32(&fftHandler, FFT_BUFFER_SIZE);
 
 
   /* USER CODE END 2 */
