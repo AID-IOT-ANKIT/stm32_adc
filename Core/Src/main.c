@@ -19,6 +19,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
+#define ARM_MATH_CM7
+#include "arm_math.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -31,8 +34,11 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define CONVERSION_COUNT 2
+#define SAMPLE_RATE_HZ (2.5 * 1e6)
+#define ADC_BUFFER_LENGTH 260
 #define ADC_ROW_TO_VOLTAGE 0.00005035477f
+#define FFT_BUFFER_SIZE 2048
+#define PRINT_TIME 2000
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -48,8 +54,15 @@ DMA_HandleTypeDef hdma_adc1;
 
 TIM_HandleTypeDef htim8;
 
-volatile uint16_t adc_data[CONVERSION_COUNT];
-volatile float potVoltage[CONVERSION_COUNT];
+volatile uint16_t adc_data[ADC_BUFFER_LENGTH];
+
+arm_rfft_fast_instance_f32 fftHandler;
+
+float fftInBuf[FFT_BUFFER_SIZE];
+float fftOutBuf[FFT_BUFFER_SIZE];
+
+uint8_t fftFlag = 0;
+uint16_t fftIndex = 0;
 
 /* USER CODE BEGIN PV */
 
@@ -69,12 +82,30 @@ static void MX_TIM8_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc) {
+//void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc) {
+//	for(uint16_t i = 0; i < (ADC_BUFFER_LENGTH / 2) - 1; ++i) {
+//		fftInBuf[fftIndex++] = adc_data[i];
+//		if(fftIndex == FFT_BUFFER_SIZE) {
+//
+//		}
+//	}
+//}
 
-	for(uint8_t i = 0; i < CONVERSION_COUNT; ++i) {
-		potVoltage[i] = ADC_ROW_TO_VOLTAGE * adc_data[i];
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
+	for(uint16_t i = 0; i < (ADC_BUFFER_LENGTH / 2) - 1; ++i) {
+
+			fftInBuf[fftIndex++] = adc_data[i];
+
+			if(fftIndex == FFT_BUFFER_SIZE) {
+
+				arm_rfft_fast_f32(&fftHandler, fftInBuf, fftOutBuf, 0);
+
+				// Set FFT flag
+				fftFlag = 1;
+
+				fftIndex = 0;
+			}
 	}
-
 }
 
 /* USER CODE END 0 */
@@ -116,9 +147,12 @@ int main(void)
   MX_TIM8_Init();
   /* USER CODE BEGIN 2 */
 
+  // Initialize FFT
+  arm_rfft_fast_init_f32(&fftHandler, FFT_BUFFER_SIZE);
+
   HAL_ADCEx_Calibration_Start(&hadc1,ADC_CALIB_OFFSET,ADC_SINGLE_ENDED);
 
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&adc_data, CONVERSION_COUNT);
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&adc_data, ADC_BUFFER_LENGTH);
   // it will fill data at 2.5 million
 
   HAL_TIM_Base_Start(&htim8);
@@ -144,6 +178,11 @@ int main(void)
     Error_Handler();
   }
 
+  uint32_t printTimer = 0;
+
+  float peakVal = 0.0f;
+  uint16_t peakHz = 0;
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -152,7 +191,43 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	 HAL_Delay(100);
+	 if(fftFlag) {
+		 peakVal = 0.0f;
+		 peakHz = 0;
+
+		 uint16_t freqIndex = 0;
+		 for(uint16_t i = 0; i < FFT_BUFFER_SIZE; i += 2) {
+
+			 float currVal = sqrtf((fftOutBuf[i] * fftOutBuf[i]) + (fftOutBuf[i+1] * fftOutBuf[i+1]));
+
+			 if(currVal > peakVal) {
+
+				 peakVal = currVal;
+
+				 peakHz = (uint16_t)((freqIndex * SAMPLE_RATE_HZ) / (float)FFT_BUFFER_SIZE);
+
+			 }
+
+			 freqIndex++;
+		 }
+	 }
+
+	 if(HAL_GetTick() - printTimer > PRINT_TIME) {
+
+		 printf("peak Hz: %u\n", peakHz);
+
+		 printTimer = HAL_GetTick();
+	 }
+
+//	 if(HAL_GetTick() - timerUSB > USB_DEBUG_TIME_S) {
+//
+//		 uint16_t usbBuf[USB_BUFFER_SIZE_MAX];
+//		 uint16_t usbBufLen = snprintf((char *)usbBuf,USB_BUFFER_SIZE_MAX, "%u\r\n", peakHz);
+//
+//		 CDC_Transmit_HS(usbBuf, usbBufLen);
+//
+//		 timerUSB = HAL_GetTick();
+//	 }
   }
   /* USER CODE END 3 */
 }
